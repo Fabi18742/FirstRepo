@@ -1,3 +1,32 @@
+<<<<<<< HEAD
+# 📚 Quiz-Webanwendung
+
+Eine vollständige Quiz-Anwendung mit HTML, CSS und Vanilla JavaScript, die es Benutzern ermöglicht, eigene Quizzes zu erstellen, zu bearbeiten, zu löschen und zu spielen.
+
+## 🎯 Funktionen
+
+- ✅ Quizzes erstellen mit drei verschiedenen Typen
+- ✅ Quizzes bearbeiten und aktualisieren
+- ✅ Quizzes löschen (mit Bestätigung)
+- ✅ Quizzes spielen mit Ergebnisanzeige
+- ✅ Dauerhafte Speicherung im Browser (localStorage)
+- ✅ Responsive Design für Desktop und Mobile
+- ✅ Vollständig auf Deutsch
+
+## 📁 Projektstruktur
+
+```
+QuizApp/
+├── index.html              # Hauptseite - Übersicht aller Quizzes
+├── README.md              # Diese Datei
+│
+├── css/                   # Stylesheets
+│   └── styles.css         # Komplettes CSS für alle Seiten
+│
+├── js/                    # JavaScript-Dateien
+│   ├── storage.js         # LocalStorage-Verwaltung
+│   ├── index.js           # Logik für Übersichtsseite
+│   ├── create.js          # Logik für Quiz-Erstellung/-Bearbeitung
 # 📚 Quiz-Webanwendung
 
 Eine vollständige Quiz-Anwendung mit HTML, CSS und Vanilla JavaScript, die es Benutzern ermöglicht, eigene Quizzes zu erstellen, zu bearbeiten, zu löschen und zu spielen.
