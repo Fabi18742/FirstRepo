@@ -20,6 +20,9 @@
                     <span class="btn-icon">+</span>
                     Neues Quiz erstellen
                 </button>
+                <button id="exportAllBtn" class="btn btn-secondary" title="Alle Quizzes exportieren">
+                    Export All
+                </button>
             </div>
 
             <div id="quizList" class="quiz-list">
@@ -31,6 +34,19 @@
                 <p>Erstelle dein erstes Quiz und leg los!</p>
             </div>
         </main>
+    </div>
+
+    <!-- Import panel (collapsible) -->
+    <div id="importPanel" class="import-panel" aria-hidden="true">
+        <button id="importPanelToggle" class="import-toggle" aria-expanded="false">Import</button>
+        <div class="import-body">
+            <label for="importTextarea">Export-String einfügen</label>
+            <textarea id="importTextarea" rows="6" placeholder="Füge hier den Export-String ein..."></textarea>
+            <div class="import-row">
+                <button id="importConfirmBtn" class="btn btn-primary btn-small">Quiz hinzufügen</button>
+            </div>
+            <small>Unterstützt Base64(JSON) oder reines JSON (Array oder einzelnes Quiz).</small>
+        </div>
     </div>
 
     <script src="js/storage.js"></script>

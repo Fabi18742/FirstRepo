@@ -134,3 +134,102 @@ function getQuizTypeLabel(type) {
     };
     return types[type] || type;
 }
+
+/**
+ * Exportiert ein einzelnes Quiz als kompakte String-Repräsentation.
+ * Wir nutzen Base64-kodiertes JSON, damit der String einfach kopierbar ist.
+ * @param {Object} quiz
+ * @returns {string}
+ */
+function exportQuizToString(quiz) {
+    try {
+        const json = JSON.stringify(quiz);
+        return btoa(unescape(encodeURIComponent(json)));
+    } catch (error) {
+        console.error('Fehler beim Erstellen des Export-Strings für Quiz:', error);
+        return null;
+    }
+}
+
+/**
+ * Exportiert alle Quizzes als ein einzelner String (Base64 JSON).
+ * @returns {string}
+ */
+function exportAllQuizzesToString() {
+    try {
+        const quizzes = loadQuizzes();
+        const payload = { version: 1, quizzes };
+        const json = JSON.stringify(payload);
+        return btoa(unescape(encodeURIComponent(json)));
+    } catch (error) {
+        console.error('Fehler beim Exportieren aller Quizzes:', error);
+        return null;
+    }
+}
+
+/**
+ * Versucht, einen importierbaren JSON-String zu parsen.
+ * Unterstützt rohe JSON oder Base64-kodiertes JSON.
+ * @param {string} str
+ * @returns {Object} geparstes Objekt
+ */
+function parseImportString(str) {
+    if (!str || typeof str !== 'string') throw new Error('Keine gültige Eingabe');
+
+    // Trim
+    const s = str.trim();
+
+    // Versuche direktes JSON
+    try {
+        return JSON.parse(s);
+    } catch (e) {
+        // ignore
+    }
+
+    // Versuche Base64 -> JSON
+    try {
+        const decoded = decodeURIComponent(escape(atob(s)));
+        return JSON.parse(decoded);
+    } catch (e) {
+        throw new Error('Konnte String nicht parsen: ungültiges Format');
+    }
+}
+
+/**
+ * Importiert Quizzes aus einem String (JSON oder Base64(JSON)).
+ * Neue Quizzes werden zu den bestehenden hinzugefügt.
+ * @param {string} str
+ * @returns {Object} { added }
+ */
+function importQuizzesFromString(str) {
+    const parsed = parseImportString(str);
+
+    let newQuizzes = [];
+    if (parsed && parsed.quizzes && Array.isArray(parsed.quizzes)) {
+        newQuizzes = parsed.quizzes;
+    } else if (Array.isArray(parsed)) {
+        newQuizzes = parsed;
+    } else if (parsed && parsed.id && parsed.title) {
+        newQuizzes = [parsed];
+    } else {
+        throw new Error('Unbekanntes Import-Format');
+    }
+
+    // Bestehende Quizzes laden
+    const existing = loadQuizzes();
+
+    // Neue Quizzes normalisieren und mit neuen IDs versehen
+    const normalized = newQuizzes.map(nq => ({
+        id: generateId(), // Immer neue ID generieren
+        title: nq.title || 'Untitled',
+        type: nq.type || 'single-choice',
+        questions: nq.questions || [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    }));
+
+    // Zu bestehenden hinzufügen
+    const combined = [...existing, ...normalized];
+    saveQuizzes(combined);
+    return { added: normalized.length };
+}

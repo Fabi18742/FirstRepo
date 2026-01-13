@@ -328,13 +328,11 @@ function saveQuiz() {
             // Quiz aktualisieren
             const success = updateQuiz(editQuizId, quizData);
             if (success) {
-                alert('Quiz wurde erfolgreich aktualisiert!');
                 window.location.href = '../index.html';
             }
         } else {
             // Neues Quiz erstellen
             const quizId = createQuiz(quizData);
-            alert('Quiz wurde erfolgreich erstellt!');
             window.location.href = '../index.html';
         }
     } catch (error) {

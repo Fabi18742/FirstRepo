@@ -7,11 +7,54 @@
 const quizListElement = document.getElementById('quizList');
 const emptyStateElement = document.getElementById('emptyState');
 const createNewQuizBtn = document.getElementById('createNewQuiz');
+const exportAllBtn = document.getElementById('exportAllBtn');
+const importPanelToggle = document.getElementById('importPanelToggle');
+const importPanel = document.getElementById('importPanel');
+const importTextarea = document.getElementById('importTextarea');
+const importConfirmBtn = document.getElementById('importConfirmBtn');
 
 // Event Listeners
 createNewQuizBtn.addEventListener('click', () => {
     window.location.href = 'pages/create.html';
 });
+
+// Export-All button
+if (exportAllBtn) {
+    exportAllBtn.addEventListener('click', () => {
+        const str = exportAllQuizzesToString();
+        if (!str) return alert('Fehler beim Erstellen des Export-Strings.');
+        navigator.clipboard?.writeText(str).then(() => {
+            alert('Export-String (alle Quizzes) wurde in die Zwischenablage kopiert.');
+        }).catch(() => {
+            // Fallback: show in prompt
+            prompt('Export-String (kopieren):', str);
+        });
+    });
+}
+
+// Import panel toggle
+if (importPanelToggle && importPanel) {
+    importPanelToggle.addEventListener('click', () => {
+        importPanel.classList.toggle('open');
+        importPanelToggle.setAttribute('aria-expanded', importPanel.classList.contains('open'));
+    });
+}
+
+// Import confirm
+if (importConfirmBtn && importTextarea) {
+    importConfirmBtn.addEventListener('click', () => {
+        const text = importTextarea.value.trim();
+        if (!text) return alert('Bitte füge einen Export-String ein.');
+        try {
+            const res = importQuizzesFromString(text);
+            importTextarea.value = '';
+            displayQuizzes();
+        } catch (err) {
+            console.error(err);
+            alert('Fehler beim Import: ' + (err.message || err));
+        }
+    });
+}
 
 /**
  * Alle Quizzes laden und anzeigen
@@ -57,21 +100,33 @@ function createQuizCard(quiz) {
         <div class="quiz-card-header">
             <div>
                 <h3 class="quiz-card-title">${escapeHtml(quiz.title)}</h3>
-                <span class="quiz-card-type">${getQuizTypeLabel(quiz.type)} • ${questionCount} ${questionText}</span>        </div>
-        </div>        <div class="quiz-card-actions">
-            <button class="btn btn-primary btn-small" onclick="startQuiz('${quiz.id}')">
-                Starten
-            </button>
-            <button class="btn btn-secondary btn-small" onclick="editQuiz('${quiz.id}')">
-                Bearbeiten
-            </button>
-            <button class="btn btn-danger btn-small" onclick="confirmDeleteQuiz('${quiz.id}', '${escapeHtml(quiz.title)}')">
-                Löschen
-            </button>
+                <span class="quiz-card-type">${getQuizTypeLabel(quiz.type)} • ${questionCount} ${questionText}</span>
+            </div>
+        </div>
+        <div class="quiz-card-actions">
+            <div class="quiz-card-actions-left">
+                <button class="btn btn-success btn-small" onclick="startQuiz('${quiz.id}')">Starten</button>
+                <button class="btn btn-primary btn-small" onclick="editQuiz('${quiz.id}')">Bearbeiten</button>
+                <button class="btn btn-danger btn-small" onclick="confirmDeleteQuiz('${quiz.id}', '${escapeHtml(quiz.title)}')">Löschen</button>
+            </div>
+            <button class="btn btn-secondary btn-small" onclick="exportQuizString('${quiz.id}')">Export</button>
         </div>
     `;
     
     return card;
+}
+
+// Export a single quiz to clipboard (string)
+function exportQuizString(quizId) {
+    const quiz = loadQuizById(quizId);
+    if (!quiz) return alert('Quiz nicht gefunden.');
+    const str = exportQuizToString(quiz);
+    if (!str) return alert('Fehler beim Erstellen des Export-Strings.');
+    navigator.clipboard?.writeText(str).then(() => {
+        alert('Export-String wurde in die Zwischenablage kopiert.');
+    }).catch(() => {
+        prompt('Export-String (kopieren):', str);
+    });
 }
 
 /**
@@ -103,7 +158,6 @@ function confirmDeleteQuiz(quizId, quizTitle) {
     if (confirmed) {
         const success = deleteQuiz(quizId);
         if (success) {
-            alert('Quiz wurde erfolgreich gelöscht!');
             displayQuizzes(); // Liste aktualisieren
         } else {
             alert('Fehler beim Löschen des Quiz!');
