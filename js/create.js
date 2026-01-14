@@ -10,6 +10,10 @@ const quizTitleInput = document.getElementById('quizTitle');
 const quizTypeSelect = document.getElementById('quizType');
 const questionsContainer = document.getElementById('questionsContainer');
 const addQuestionBtn = document.getElementById('addQuestionBtn');
+const timeChallengeOptions = document.getElementById('timeChallengeOptions');
+const initialTimeInput = document.getElementById('initialTime');
+const timeBonusInput = document.getElementById('timeBonus');
+const timePenaltyInput = document.getElementById('timePenalty');
 
 // Variablen
 let editMode = false;
@@ -44,14 +48,29 @@ function loadQuizForEditing(quizId) {
     const quiz = loadQuizById(quizId);
     
     if (!quiz) {
-        alert('Quiz nicht gefunden!');
+        showToast('Quiz nicht gefunden!', 'error');
         window.location.href = '../index.html';
         return;
     }
     
     // Grunddaten laden
     quizTitleInput.value = quiz.title;
-    quizTypeSelect.value = quiz.type;
+    
+    // Quiz-Typ setzen (mit oder ohne Zeit-Challenge)
+    if (quiz.timeChallenge && quiz.timeChallenge.enabled) {
+        // Zeit-Challenge aktiv - verwende den -time Typ
+        const baseType = quiz.type.replace('-time', '');
+        quizTypeSelect.value = baseType + '-time';
+        timeChallengeOptions.style.display = 'block';
+        initialTimeInput.value = quiz.timeChallenge.initialTime || 60;
+        timeBonusInput.value = quiz.timeChallenge.timeBonus || 5;
+        timePenaltyInput.value = quiz.timeChallenge.timePenalty || 3;
+        initialTimeInput.required = true;
+        timeBonusInput.required = true;
+        timePenaltyInput.required = true;
+    } else {
+        quizTypeSelect.value = quiz.type;
+    }
     
     // Fragen laden
     quiz.questions.forEach(question => {
@@ -69,8 +88,24 @@ quizForm.addEventListener('submit', (e) => {
     saveQuiz();
 });
 
-// Quiz-Typ-Änderung überwachen (bei Änderung alle Fragen neu rendern)
+// Quiz-Typ-Änderung überwachen
 quizTypeSelect.addEventListener('change', () => {
+    const selectedType = quizTypeSelect.value;
+    
+    // Zeit-Challenge Optionen anzeigen wenn -time Typ gewählt
+    if (selectedType.endsWith('-time')) {
+        timeChallengeOptions.style.display = 'block';
+        initialTimeInput.required = true;
+        timeBonusInput.required = true;
+        timePenaltyInput.required = true;
+    } else {
+        timeChallengeOptions.style.display = 'none';
+        initialTimeInput.required = false;
+        timeBonusInput.required = false;
+        timePenaltyInput.required = false;
+    }
+    
+    // Fragen neu rendern
     const questions = collectQuestionData();
     questionsContainer.innerHTML = '';
     questionCounter = 0;
@@ -84,7 +119,10 @@ quizTypeSelect.addEventListener('change', () => {
 function addQuestion(questionData = null) {
     questionCounter++;
     const questionId = `question_${questionCounter}`;
-    const quizType = quizTypeSelect.value;
+    let quizType = quizTypeSelect.value;
+    
+    // Basis-Typ extrahieren (ohne -time)
+    const baseType = quizType.replace('-time', '');
     
     // Container für die Frage erstellen
     const questionDiv = document.createElement('div');
@@ -110,7 +148,7 @@ function addQuestion(questionData = null) {
     // Antworten basierend auf Quiz-Typ
     let answersHtml = '';
     
-    if (quizType === 'true-false') {
+    if (baseType === 'true-false') {
         // Wahr/Falsch: Feste zwei Antworten
         const correctAnswer = questionData ? questionData.correctAnswers[0] : 0;
         answersHtml = `
@@ -128,7 +166,7 @@ function addQuestion(questionData = null) {
         `;
     } else {
         // Single-Choice oder Multiple-Choice: Dynamische Antworten
-        const inputType = quizType === 'single-choice' ? 'radio' : 'checkbox';
+        const inputType = baseType === 'single-choice' ? 'radio' : 'checkbox';
         const answerContainerId = `${questionId}_answers`;
         
         answersHtml = `
@@ -149,9 +187,9 @@ function addQuestion(questionData = null) {
     questionsContainer.appendChild(questionDiv);
     
     // Bei Single/Multiple-Choice: Initiale Antworten hinzufügen
-    if (quizType !== 'true-false') {
+    if (baseType !== 'true-false') {
         const answerContainerId = `${questionId}_answers`;
-        const inputType = quizType === 'single-choice' ? 'radio' : 'checkbox';
+        const inputType = baseType === 'single-choice' ? 'radio' : 'checkbox';
         
         if (questionData && questionData.answers) {
             // Vorhandene Antworten laden
@@ -210,7 +248,7 @@ function removeAnswer(button) {
     
     // Mindestens 2 Antworten müssen bleiben
     if (container.children.length <= 2) {
-        alert('Es müssen mindestens 2 Antworten vorhanden sein!');
+        showToast('Es müssen mindestens 2 Antworten vorhanden sein!', 'warning');
         return;
     }
     
@@ -226,7 +264,7 @@ function removeQuestion(questionId) {
     
     // Mindestens 1 Frage muss bleiben
     if (questionsContainer.children.length <= 1) {
-        alert('Es muss mindestens 1 Frage vorhanden sein!');
+        showToast('Es muss mindestens 1 Frage vorhanden sein!', 'warning');
         return;
     }
     
@@ -255,12 +293,13 @@ function collectQuestionData() {
     
     questionItems.forEach(questionDiv => {
         const questionText = questionDiv.querySelector('.question-text-input').value.trim();
-        const quizType = quizTypeSelect.value;
+        let quizType = quizTypeSelect.value;
+        const baseType = quizType.replace('-time', '');
         
         let answers = [];
         let correctAnswers = [];
         
-        if (quizType === 'true-false') {
+        if (baseType === 'true-false') {
             // Wahr/Falsch
             answers = ['Wahr', 'Falsch'];
             const selectedRadio = questionDiv.querySelector('input[type="radio"]:checked');
@@ -294,31 +333,42 @@ function collectQuestionData() {
 function saveQuiz() {
     // Validierung
     if (!quizTitleInput.value.trim()) {
-        alert('Bitte gib einen Quiz-Titel ein!');
+        showToast('Bitte gib einen Quiz-Titel ein!', 'warning');
         return;
     }
     
     if (!quizTypeSelect.value) {
-        alert('Bitte wähle einen Quiz-Typ aus!');
+        showToast('Bitte wähle einen Quiz-Typ aus!', 'warning');
         return;
     }
     
     if (questionsContainer.children.length === 0) {
-        alert('Bitte füge mindestens eine Frage hinzu!');
+        showToast('Bitte füge mindestens eine Frage hinzu!', 'warning');
         return;
     }
     
     // Daten sammeln
+    let selectedType = quizTypeSelect.value;
+    const baseType = selectedType.replace('-time', '');
+    const isTimeChallenge = selectedType.endsWith('-time');
+    
     const quizData = {
         title: quizTitleInput.value.trim(),
-        type: quizTypeSelect.value,
-        questions: collectQuestionData()
+        type: baseType, // Speichere nur den Basis-Typ (ohne -time)
+        questions: collectQuestionData(),
+        timeChallenge: {
+            enabled: isTimeChallenge,
+            initialTime: isTimeChallenge ? parseInt(initialTimeInput.value) : 60,
+            timeBonus: isTimeChallenge ? parseInt(timeBonusInput.value) : 5,
+            timePenalty: isTimeChallenge ? parseInt(timePenaltyInput.value) : 3,
+            repeatWrongQuestions: true // Immer aktiviert
+        }
     };
     
     // Validierung: Mindestens eine richtige Antwort pro Frage
     for (let i = 0; i < quizData.questions.length; i++) {
         if (quizData.questions[i].correctAnswers.length === 0) {
-            alert(`Frage ${i + 1}: Bitte markiere mindestens eine richtige Antwort!`);            return;
+            showToast(`Frage ${i + 1}: Bitte markiere mindestens eine richtige Antwort!`, 'warning');            return;
         }
     }
     
@@ -337,7 +387,7 @@ function saveQuiz() {
         }
     } catch (error) {
         console.error('Fehler beim Speichern:', error);
-        alert('Fehler beim Speichern des Quiz!');
+        showToast('Fehler beim Speichern des Quiz!', 'error');
     }
 }
 

@@ -30,9 +30,28 @@
                         <select id="quizType" required>
                             <option value="">Bitte wählen...</option>
                             <option value="single-choice">Single-Choice (eine richtige Antwort)</option>
+                            <option value="single-choice-time">Single-Choice (Zeit-Challenge)</option>
                             <option value="multiple-choice">Multiple-Choice (mehrere richtige Antworten)</option>
                             <option value="true-false">Wahr / Falsch</option>
+                            <option value="true-false-time">Wahr / Falsch (Zeit-Challenge)</option>
                         </select>
+                    </div>
+
+                    <div id="timeChallengeOptions" class="time-challenge-options" style="display: none;">
+                        <div class="form-group">
+                            <label for="initialTime">Startzeit (Sekunden) *</label>
+                            <input type="number" id="initialTime" min="1" max="600" value="60" placeholder="z.B. 60">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="timeBonus">Zeit-Bonus pro richtiger Antwort (Sekunden) *</label>
+                            <input type="number" id="timeBonus" min="1" max="60" value="5" placeholder="z.B. 5">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="timePenalty">Zeit-Strafe bei falscher Antwort (Sekunden) *</label>
+                            <input type="number" id="timePenalty" min="0" max="60" value="3" placeholder="z.B. 3">
+                        </div>
                     </div>
                 </div>
 

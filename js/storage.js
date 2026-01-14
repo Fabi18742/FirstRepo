@@ -6,6 +6,112 @@
 const STORAGE_KEY = 'quizApp_quizzes';
 
 /**
+ * Toast-Notification anzeigen
+ * @param {string} message - Die anzuzeigende Nachricht
+ * @param {string} type - Der Typ: 'success', 'error', 'warning', 'info' (Standard: 'info')
+ * @param {number} duration - Anzeigedauer in ms (Standard: 3000)
+ */
+function showToast(message, type = 'info', duration = 3000) {
+    // Toast-Container erstellen falls nicht vorhanden
+    let container = document.querySelector('.toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+    }
+    
+    // Toast erstellen
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    
+    // Icon basierend auf Typ
+    let icon = 'ℹ️';
+    if (type === 'success') icon = '✅';
+    else if (type === 'error') icon = '❌';
+    else if (type === 'warning') icon = '⚠️';
+    
+    toast.innerHTML = `
+        <span class="toast-icon">${icon}</span>
+        <span class="toast-message">${message}</span>
+    `;
+    
+    container.appendChild(toast);
+    
+    // Nach Dauer ausblenden und entfernen
+    setTimeout(() => {
+        toast.classList.add('toast-hide');
+        setTimeout(() => {
+            toast.remove();
+            // Container entfernen wenn leer
+            if (container.children.length === 0) {
+                container.remove();
+            }
+        }, 300);
+    }, duration);
+}
+
+/**
+ * Confirmation Modal anzeigen
+ * @param {string} message - Die Bestätigungsnachricht
+ * @param {string} title - Der Titel (Standard: 'Bestätigung')
+ * @param {string} confirmText - Text für Bestätigen-Button (Standard: 'Bestätigen')
+ * @param {string} cancelText - Text für Abbrechen-Button (Standard: 'Abbrechen')
+ * @returns {Promise<boolean>} Promise die true zurückgibt bei Bestätigung, false bei Abbruch
+ */
+function showConfirm(message, title = 'Bestätigung', confirmText = 'Bestätigen', cancelText = 'Abbrechen') {
+    return new Promise((resolve) => {
+        // Modal-Overlay erstellen
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        
+        // Modal erstellen
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-header">
+                <span class="modal-icon">⚠️</span>
+                <h2 class="modal-title">${title}</h2>
+            </div>
+            <div class="modal-message">${message}</div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary modal-cancel">${cancelText}</button>
+                <button class="btn btn-danger modal-confirm">${confirmText}</button>
+            </div>
+        `;
+        
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        
+        // Event-Handler
+        const confirmBtn = modal.querySelector('.modal-confirm');
+        const cancelBtn = modal.querySelector('.modal-cancel');
+        
+        const closeModal = (result) => {
+            overlay.style.animation = 'modalFadeIn 0.2s ease-out reverse';
+            setTimeout(() => {
+                overlay.remove();
+                resolve(result);
+            }, 200);
+        };
+        
+        confirmBtn.addEventListener('click', () => closeModal(true));
+        cancelBtn.addEventListener('click', () => closeModal(false));
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) closeModal(false);
+        });
+        
+        // ESC-Taste zum Schließen
+        const handleEsc = (e) => {
+            if (e.key === 'Escape') {
+                closeModal(false);
+                document.removeEventListener('keydown', handleEsc);
+            }
+        };
+        document.addEventListener('keydown', handleEsc);
+    });
+}
+
+/**
  * Alle Quizzes aus dem localStorage laden
  * @returns {Array} Array von Quiz-Objekten
  */
@@ -30,7 +136,7 @@ function saveQuizzes(quizzes) {
         return true;
     } catch (error) {
         console.error('Fehler beim Speichern der Quizzes:', error);
-        alert('Fehler beim Speichern! Möglicherweise ist der Speicher voll.');
+        showToast('Fehler beim Speichern! Möglicherweise ist der Speicher voll.', 'error');
         return false;
     }
 }
@@ -59,6 +165,11 @@ function createQuiz(quizData) {
         title: quizData.title,
         type: quizData.type,
         questions: quizData.questions,
+        timeChallenge: quizData.timeChallenge || {
+            enabled: false,
+            initialTime: 60,
+            timeBonus: 5
+        },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
     };
@@ -90,6 +201,11 @@ function updateQuiz(quizId, quizData) {
         title: quizData.title,
         type: quizData.type,
         questions: quizData.questions,
+        timeChallenge: quizData.timeChallenge || {
+            enabled: false,
+            initialTime: 60,
+            timeBonus: 5
+        },
         updatedAt: new Date().toISOString()
     };
     

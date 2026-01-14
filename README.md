@@ -191,6 +191,14 @@ Dieses Projekt demonstriert:
 - Bilder in Fragen
 - Sound-Effekte
 - Dark Mode
+- Weiterbutton soll nicht da sein sondern automatisch weiter
+- Startzeit darf weniger als 10s sein
+- Zeit modus im dropdown auswählen
+- Wahr oder Falsch als Speed modus
+- Keine Popups mehr zB bei Export sondern eigenes visuelles feedback
+
++ Sort funktion von quiz
+
 
 ## 👨‍💻 Entwicklung
 

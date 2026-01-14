@@ -22,9 +22,9 @@ createNewQuizBtn.addEventListener('click', () => {
 if (exportAllBtn) {
     exportAllBtn.addEventListener('click', () => {
         const str = exportAllQuizzesToString();
-        if (!str) return alert('Fehler beim Erstellen des Export-Strings.');
+        if (!str) return showToast('Fehler beim Erstellen des Export-Strings.', 'error');
         navigator.clipboard?.writeText(str).then(() => {
-            alert('Export-String (alle Quizzes) wurde in die Zwischenablage kopiert.');
+            showToast('Export-String (alle Quizzes) wurde in die Zwischenablage kopiert.', 'success');
         }).catch(() => {
             // Fallback: show in prompt
             prompt('Export-String (kopieren):', str);
@@ -44,14 +44,15 @@ if (importPanelToggle && importPanel) {
 if (importConfirmBtn && importTextarea) {
     importConfirmBtn.addEventListener('click', () => {
         const text = importTextarea.value.trim();
-        if (!text) return alert('Bitte füge einen Export-String ein.');
+        if (!text) return showToast('Bitte füge einen Export-String ein.', 'warning');
         try {
             const res = importQuizzesFromString(text);
             importTextarea.value = '';
             displayQuizzes();
+            showToast(`${res.added} Quiz${res.added > 1 ? 'zes' : ''} erfolgreich importiert!`, 'success');
         } catch (err) {
             console.error(err);
-            alert('Fehler beim Import: ' + (err.message || err));
+            showToast('Fehler beim Import: ' + (err.message || err), 'error');
         }
     });
 }
@@ -90,17 +91,44 @@ function displayQuizzes() {
  */
 function createQuizCard(quiz) {
     const card = document.createElement('div');
-    card.className = 'quiz-card';
+    
+    // Basis-Klasse
+    let cardClasses = 'quiz-card';
+    
+    // Quiz-Typ-spezifische Klasse hinzufügen
+    if (quiz.type === 'single-choice') {
+        cardClasses += ' quiz-card-single-choice';
+    } else if (quiz.type === 'multiple-choice') {
+        cardClasses += ' quiz-card-multiple-choice';
+    } else if (quiz.type === 'true-false') {
+        cardClasses += ' quiz-card-true-false';
+    }
+    
+    // Zeit-Challenge Klasse hinzufügen
+    if (quiz.timeChallenge && quiz.timeChallenge.enabled) {
+        cardClasses += ' quiz-card-time-challenge';
+    }
+    
+    card.className = cardClasses;
     
     // Anzahl der Fragen
     const questionCount = quiz.questions.length;
     const questionText = questionCount === 1 ? 'Frage' : 'Fragen';
     
+    // Zeit-Challenge Badge
+    const timeChallengeBadge = (quiz.timeChallenge && quiz.timeChallenge.enabled) 
+        ? '<span class="time-challenge-badge">Zeit-Challenge</span>' 
+        : '';
+    
     card.innerHTML = `
         <div class="quiz-card-header">
             <div>
                 <h3 class="quiz-card-title">${escapeHtml(quiz.title)}</h3>
-                <span class="quiz-card-type">${getQuizTypeLabel(quiz.type)} • ${questionCount} ${questionText}</span>
+                <div class="quiz-card-meta">
+                    <span class="quiz-card-type">${getQuizTypeLabel(quiz.type)}</span>
+                    <span class="quiz-card-questions">${questionCount} ${questionText}</span>
+                    ${timeChallengeBadge}
+                </div>
             </div>
         </div>
         <div class="quiz-card-actions">
@@ -119,11 +147,11 @@ function createQuizCard(quiz) {
 // Export a single quiz to clipboard (string)
 function exportQuizString(quizId) {
     const quiz = loadQuizById(quizId);
-    if (!quiz) return alert('Quiz nicht gefunden.');
+    if (!quiz) return showToast('Quiz nicht gefunden.', 'error');
     const str = exportQuizToString(quiz);
-    if (!str) return alert('Fehler beim Erstellen des Export-Strings.');
+    if (!str) return showToast('Fehler beim Erstellen des Export-Strings.', 'error');
     navigator.clipboard?.writeText(str).then(() => {
-        alert('Export-String wurde in die Zwischenablage kopiert.');
+        showToast('Export-String wurde in die Zwischenablage kopiert.', 'success');
     }).catch(() => {
         prompt('Export-String (kopieren):', str);
     });
@@ -150,17 +178,21 @@ function editQuiz(quizId) {
  * @param {string} quizId - Die ID des Quiz
  * @param {string} quizTitle - Der Titel des Quiz
  */
-function confirmDeleteQuiz(quizId, quizTitle) {
-    const confirmed = confirm(
-        `Möchtest du das Quiz "${quizTitle}" wirklich löschen?\n\nDieser Vorgang kann nicht rückgängig gemacht werden.`
+async function confirmDeleteQuiz(quizId, quizTitle) {
+    const confirmed = await showConfirm(
+        `Möchtest du das Quiz "${quizTitle}" wirklich löschen?<br><br>Dieser Vorgang kann nicht rückgängig gemacht werden.`,
+        'Quiz löschen',
+        'Löschen',
+        'Abbrechen'
     );
     
     if (confirmed) {
         const success = deleteQuiz(quizId);
         if (success) {
             displayQuizzes(); // Liste aktualisieren
+            showToast('Quiz erfolgreich gelöscht.', 'success');
         } else {
-            alert('Fehler beim Löschen des Quiz!');
+            showToast('Fehler beim Löschen des Quiz!', 'error');
         }
     }
 }
