@@ -167,7 +167,9 @@ function createQuiz(quizData) {
         timeChallenge: quizData.timeChallenge || {
             enabled: false,
             initialTime: 60,
-            timeBonus: 5
+            timeBonus: 5,
+            timePenalty: 3,
+            repeatWrongQuestions: true
         },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -203,7 +205,9 @@ function updateQuiz(quizId, quizData) {
         timeChallenge: quizData.timeChallenge || {
             enabled: false,
             initialTime: 60,
-            timeBonus: 5
+            timeBonus: 5,
+            timePenalty: 3,
+            repeatWrongQuestions: true
         },
         updatedAt: new Date().toISOString()
     };
@@ -245,7 +249,8 @@ function getQuizTypeLabel(type) {
     const types = {
         'single-choice': 'Single-Choice',
         'multiple-choice': 'Multiple-Choice',
-        'true-false': 'Wahr / Falsch'
+        'true-false': 'Wahr / Falsch',
+        'mixed': 'Gemischt'
     };
     return types[type] || type;
 }
@@ -354,4 +359,15 @@ function importQuizzesFromString(str) {
     const combined = [...existing, ...normalized];
     saveQuizzes(combined);
     return { added: normalized.length };
+}
+
+/**
+ * HTML-Entities escapen (Schutz vor XSS)
+ * @param {string} text - Der zu escapende Text
+ * @returns {string} Der escapte Text
+ */
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }

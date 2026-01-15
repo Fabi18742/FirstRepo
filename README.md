@@ -197,8 +197,7 @@ Dieses Projekt demonstriert:
 - Wahr oder Falsch als Speed modus
 - Keine Popups mehr zB bei Export sondern eigenes visuelles feedback
 - Sort funktion von quiz
-
-+ Unterschiedliche fragen types in einem quiz
+- Unterschiedliche fragen types in einem quiz
 
 
 ## 👨‍💻 Entwicklung

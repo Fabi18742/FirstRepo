@@ -21,7 +21,6 @@ const timeRemaining = document.getElementById('timeRemaining');
 
 // Variablen
 let currentQuiz = null;
-let currentQuestionIndex = 0;
 let userAnswers = [];
 let score = 0;
 let totalQuestionsAnswered = 0; // Zähler für alle beantworteten Fragen (für Fortschrittsbalken)
@@ -510,9 +509,9 @@ function showResult() {
  * Quiz neu starten
  */
 function restartQuiz() {
-    currentQuestionIndex = 0;
     userAnswers = [];
     score = 0;
+    totalQuestionsAnswered = 0;
     
     // Fragen-Queue zurücksetzen
     questionQueue = currentQuiz.questions.map((_, index) => index);
@@ -533,17 +532,6 @@ function restartQuiz() {
     quizGame.style.display = 'block';
     
     showQuestion();
-}
-
-/**
- * HTML-Entities escapen
- * @param {string} text - Der zu escapende Text
- * @returns {string} Der escapte Text
- */
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
 }
 
 // Event Listeners

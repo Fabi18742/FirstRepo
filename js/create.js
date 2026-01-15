@@ -412,16 +412,5 @@ function saveQuiz() {
     }
 }
 
-/**
- * HTML-Entities escapen
- * @param {string} text - Der zu escapende Text
- * @returns {string} Der escapte Text
- */
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
 // Seite initialisieren
 initializePage();
