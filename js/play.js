@@ -246,10 +246,13 @@ function showQuestion() {
     `;
     
     // Antworten anzeigen
-    displayAnswers(question);
+    displayAnswers(question, actualQuestionIndex);
+    
+    // Fragentyp ermitteln (aus Frage selbst oder aus Quiz-Typ)
+    const questionType = question.type || currentQuiz.type;
     
     // Button-Text anpassen und bei Zeit-Challenge oder True/False ausblenden
-    if (timeChallengeMode || currentQuiz.type === 'true-false') {
+    if (timeChallengeMode || questionType === 'true-false') {
         nextBtn.style.display = 'none';
     } else {
         nextBtn.style.display = 'inline-flex';
@@ -260,12 +263,16 @@ function showQuestion() {
 /**
  * Antworten basierend auf Quiz-Typ anzeigen
  * @param {Object} question - Das Fragen-Objekt
+ * @param {number} questionIndex - Index der aktuellen Frage
  */
-function displayAnswers(question) {
+function displayAnswers(question, questionIndex) {
     answersContainer.innerHTML = '';
     
+    // Fragentyp ermitteln (aus Frage selbst oder aus Quiz-Typ)
+    const questionType = question.type || currentQuiz.type;
+    
     // True/False bekommt spezielle quadratische Felder
-    if (currentQuiz.type === 'true-false') {
+    if (questionType === 'true-false') {
         const truefalseContainer = document.createElement('div');
         truefalseContainer.className = 'truefalse-container';
         
@@ -292,7 +299,7 @@ function displayAnswers(question) {
         answersContainer.appendChild(truefalseContainer);
     } else {
         // Normal für Single/Multiple Choice
-        const inputType = currentQuiz.type === 'multiple-choice' ? 'checkbox' : 'radio';
+        const inputType = questionType === 'multiple-choice' ? 'checkbox' : 'radio';
         const inputName = 'current_answer';
         
         question.answers.forEach((answer, index) => {

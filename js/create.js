@@ -7,7 +7,7 @@
 const pageTitle = document.getElementById('pageTitle');
 const quizForm = document.getElementById('quizForm');
 const quizTitleInput = document.getElementById('quizTitle');
-const quizTypeSelect = document.getElementById('quizType');
+const timeChallengeCheckbox = document.getElementById('timeChallengeEnabled');
 const questionsContainer = document.getElementById('questionsContainer');
 const addQuestionBtn = document.getElementById('addQuestionBtn');
 const timeChallengeOptions = document.getElementById('timeChallengeOptions');
@@ -56,11 +56,9 @@ function loadQuizForEditing(quizId) {
     // Grunddaten laden
     quizTitleInput.value = quiz.title;
     
-    // Quiz-Typ setzen (mit oder ohne Zeit-Challenge)
+    // Zeit-Challenge Status setzen
     if (quiz.timeChallenge && quiz.timeChallenge.enabled) {
-        // Zeit-Challenge aktiv - verwende den -time Typ
-        const baseType = quiz.type.replace('-time', '');
-        quizTypeSelect.value = baseType + '-time';
+        timeChallengeCheckbox.checked = true;
         timeChallengeOptions.style.display = 'block';
         initialTimeInput.value = quiz.timeChallenge.initialTime || 60;
         timeBonusInput.value = quiz.timeChallenge.timeBonus || 5;
@@ -68,8 +66,6 @@ function loadQuizForEditing(quizId) {
         initialTimeInput.required = true;
         timeBonusInput.required = true;
         timePenaltyInput.required = true;
-    } else {
-        quizTypeSelect.value = quiz.type;
     }
     
     // Fragen laden
@@ -88,12 +84,9 @@ quizForm.addEventListener('submit', (e) => {
     saveQuiz();
 });
 
-// Quiz-Typ-Änderung überwachen
-quizTypeSelect.addEventListener('change', () => {
-    const selectedType = quizTypeSelect.value;
-    
-    // Zeit-Challenge Optionen anzeigen wenn -time Typ gewählt
-    if (selectedType.endsWith('-time')) {
+// Zeit-Challenge Checkbox überwachen
+timeChallengeCheckbox.addEventListener('change', () => {
+    if (timeChallengeCheckbox.checked) {
         timeChallengeOptions.style.display = 'block';
         initialTimeInput.required = true;
         timeBonusInput.required = true;
@@ -104,12 +97,6 @@ quizTypeSelect.addEventListener('change', () => {
         timeBonusInput.required = false;
         timePenaltyInput.required = false;
     }
-    
-    // Fragen neu rendern
-    const questions = collectQuestionData();
-    questionsContainer.innerHTML = '';
-    questionCounter = 0;
-    questions.forEach(q => addQuestion(q));
 });
 
 /**
@@ -119,21 +106,32 @@ quizTypeSelect.addEventListener('change', () => {
 function addQuestion(questionData = null) {
     questionCounter++;
     const questionId = `question_${questionCounter}`;
-    let quizType = quizTypeSelect.value;
     
-    // Basis-Typ extrahieren (ohne -time)
-    const baseType = quizType.replace('-time', '');
+    // Fragentyp aus gespeicherten Daten oder Standard
+    const questionType = questionData?.type || 'single-choice';
     
     // Container für die Frage erstellen
     const questionDiv = document.createElement('div');
     questionDiv.className = 'question-item';
-    questionDiv.dataset.questionId = questionId;    // Frage-Header
+    questionDiv.dataset.questionId = questionId;
+
+    // Frage-Header mit Typ-Auswahl
     const headerHtml = `
         <div class="question-header">
-            <span class="question-number">Frage ${questionCounter}</span>
-            <button type="button" class="remove-question" onclick="removeQuestion('${questionId}')">
-                ×
-            </button>
+            <div class="question-title-row">
+                <span class="question-number">Frage ${questionCounter}</span>
+                <button type="button" class="remove-question" onclick="removeQuestion('${questionId}')">
+                    ×
+                </button>
+            </div>
+            <div class="form-group">
+                <label>Fragentyp *</label>
+                <select class="question-type-select" data-question-id="${questionId}" required>
+                    <option value="single-choice" ${questionType === 'single-choice' ? 'selected' : ''}>Single-Choice (eine richtige Antwort)</option>
+                    <option value="multiple-choice" ${questionType === 'multiple-choice' ? 'selected' : ''}>Multiple-Choice (mehrere richtige Antworten)</option>
+                    <option value="true-false" ${questionType === 'true-false' ? 'selected' : ''}>Wahr / Falsch</option>
+                </select>
+            </div>
         </div>
     `;
     
@@ -145,13 +143,42 @@ function addQuestion(questionData = null) {
         </div>
     `;
     
-    // Antworten basierend auf Quiz-Typ
-    let answersHtml = '';
+    // Antworten-Container (wird dynamisch gefüllt)
+    const answersHtml = `
+        <div class="answers-section" id="${questionId}_answers_section">
+            <!-- Antworten werden hier eingefügt -->
+        </div>
+    `;
     
-    if (baseType === 'true-false') {
+    // Alles zusammenfügen
+    questionDiv.innerHTML = headerHtml + questionTextHtml + answersHtml;
+    questionsContainer.appendChild(questionDiv);
+    
+    // Antworten initial rendern
+    renderAnswersForQuestion(questionId, questionType, questionData);
+    
+    // Event Listener für Typ-Änderung
+    const typeSelect = questionDiv.querySelector('.question-type-select');
+    typeSelect.addEventListener('change', (e) => {
+        const newType = e.target.value;
+        renderAnswersForQuestion(questionId, newType);
+    });
+}
+
+/**
+ * Antworten für eine Frage rendern
+ * @param {string} questionId - ID der Frage
+ * @param {string} questionType - Typ der Frage
+ * @param {Object} questionData - Optional: Vorhandene Fragendaten
+ */
+function renderAnswersForQuestion(questionId, questionType, questionData = null) {
+    const answersSection = document.getElementById(`${questionId}_answers_section`);
+    answersSection.innerHTML = '';
+    
+    if (questionType === 'true-false') {
         // Wahr/Falsch: Feste zwei Antworten
-        const correctAnswer = questionData ? questionData.correctAnswers[0] : 0;
-        answersHtml = `
+        const correctAnswer = questionData?.correctAnswers?.[0] || 0;
+        answersSection.innerHTML = `
             <div class="form-group">
                 <label>Richtige Antwort auswählen *</label>
                 <div class="answer-item">
@@ -166,35 +193,27 @@ function addQuestion(questionData = null) {
         `;
     } else {
         // Single-Choice oder Multiple-Choice: Dynamische Antworten
-        const inputType = baseType === 'single-choice' ? 'radio' : 'checkbox';
+        const inputType = questionType === 'single-choice' ? 'radio' : 'checkbox';
         const answerContainerId = `${questionId}_answers`;
         
-        answersHtml = `
+        answersSection.innerHTML = `
             <div class="form-group">
                 <label>Antworten (markiere die richtige(n) Antwort(en)) *</label>
                 <div id="${answerContainerId}" class="answers-list">
                     <!-- Antworten werden hier eingefügt -->
-                </div>                <button type="button" class="btn btn-secondary btn-small add-answer-btn" 
+                </div>
+                <button type="button" class="btn btn-secondary btn-small add-answer-btn" 
                         onclick="addAnswer('${answerContainerId}', '${questionId}', '${inputType}')">
                     + Antwort
                 </button>
             </div>
         `;
-    }
-    
-    // Alles zusammenfügen
-    questionDiv.innerHTML = headerHtml + questionTextHtml + answersHtml;
-    questionsContainer.appendChild(questionDiv);
-    
-    // Bei Single/Multiple-Choice: Initiale Antworten hinzufügen
-    if (baseType !== 'true-false') {
-        const answerContainerId = `${questionId}_answers`;
-        const inputType = baseType === 'single-choice' ? 'radio' : 'checkbox';
         
-        if (questionData && questionData.answers) {
+        // Antworten hinzufügen
+        if (questionData?.answers) {
             // Vorhandene Antworten laden
             questionData.answers.forEach((answer, index) => {
-                const isCorrect = questionData.correctAnswers.includes(index);
+                const isCorrect = questionData.correctAnswers?.includes(index) || false;
                 addAnswer(answerContainerId, questionId, inputType, answer, isCorrect);
             });
         } else {
@@ -293,13 +312,13 @@ function collectQuestionData() {
     
     questionItems.forEach(questionDiv => {
         const questionText = questionDiv.querySelector('.question-text-input').value.trim();
-        let quizType = quizTypeSelect.value;
-        const baseType = quizType.replace('-time', '');
+        const questionTypeSelect = questionDiv.querySelector('.question-type-select');
+        const questionType = questionTypeSelect.value;
         
         let answers = [];
         let correctAnswers = [];
         
-        if (baseType === 'true-false') {
+        if (questionType === 'true-false') {
             // Wahr/Falsch
             answers = ['Wahr', 'Falsch'];
             const selectedRadio = questionDiv.querySelector('input[type="radio"]:checked');
@@ -318,6 +337,7 @@ function collectQuestionData() {
         }
         
         questions.push({
+            type: questionType,
             text: questionText,
             answers: answers,
             correctAnswers: correctAnswers
@@ -337,31 +357,32 @@ function saveQuiz() {
         return;
     }
     
-    if (!quizTypeSelect.value) {
-        showToast('Bitte wähle einen Quiz-Typ aus!', 'warning');
-        return;
-    }
-    
     if (questionsContainer.children.length === 0) {
         showToast('Bitte füge mindestens eine Frage hinzu!', 'warning');
         return;
     }
     
     // Daten sammeln
-    let selectedType = quizTypeSelect.value;
-    const baseType = selectedType.replace('-time', '');
-    const isTimeChallenge = selectedType.endsWith('-time');
+    const questions = collectQuestionData();
+    const isTimeChallenge = timeChallengeCheckbox.checked;
+    
+    // Quiz-Typ automatisch ermitteln basierend auf den Fragen
+    const questionTypes = questions.map(q => q.type);
+    const uniqueTypes = [...new Set(questionTypes)];
+    
+    // Wenn alle Fragen den gleichen Typ haben, verwende diesen, sonst "mixed"
+    let quizType = uniqueTypes.length === 1 ? uniqueTypes[0] : 'mixed';
     
     const quizData = {
         title: quizTitleInput.value.trim(),
-        type: baseType, // Speichere nur den Basis-Typ (ohne -time)
-        questions: collectQuestionData(),
+        type: quizType,
+        questions: questions,
         timeChallenge: {
             enabled: isTimeChallenge,
             initialTime: isTimeChallenge ? parseInt(initialTimeInput.value) : 60,
             timeBonus: isTimeChallenge ? parseInt(timeBonusInput.value) : 5,
             timePenalty: isTimeChallenge ? parseInt(timePenaltyInput.value) : 3,
-            repeatWrongQuestions: true // Immer aktiviert
+            repeatWrongQuestions: true
         }
     };
     
