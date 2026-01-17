@@ -1103,8 +1103,8 @@ main {
 .truefalse-box:hover {
     transform: translateY(-5px);
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
-    background: #22c55e;
-    border-color: #22c55e;
+    background: #4A90E2;
+    border-color: #357ABD;
     color: white;
 }
 

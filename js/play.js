@@ -253,8 +253,8 @@ function showQuestion() {
     // Fragentyp ermitteln (aus Frage selbst oder aus Quiz-Typ)
     const questionType = question.type || currentQuiz.type;
     
-    // Button-Text anpassen und bei Zeit-Challenge oder True/False ausblenden
-    if (timeChallengeMode || questionType === 'true-false') {
+    // Button-Text anpassen und bei Zeit-Challenge ausblenden
+    if (timeChallengeMode) {
         nextBtn.style.display = 'none';
     } else {
         nextBtn.style.display = 'inline-flex';
@@ -341,7 +341,7 @@ function toggleTrueFalseAnswer(answerIndex) {
     const input = selectedBox.querySelector('input');
     input.checked = true;
     
-    // Bei Zeitchallenge: Farb-Feedback, sonst nur blau
+    // Bei Zeitchallenge: Farb-Feedback und automatisch weiter
     if (timeChallengeMode) {
         const actualQuestionIndex = questionQueue[0];
         const question = currentQuiz.questions[actualQuestionIndex];
@@ -352,14 +352,15 @@ function toggleTrueFalseAnswer(answerIndex) {
         } else {
             selectedBox.classList.add('wrong-feedback');
         }
+        
+        // Automatisch zur nächsten Frage
+        setTimeout(() => {
+            nextQuestion();
+        }, 300);
     } else {
+        // Bei normalem Quiz: Nur blau markieren, Benutzer muss Weiter klicken
         selectedBox.classList.add('selected');
     }
-    
-    // Bei True/False immer automatisch weiter (mit kurzer Verzögerung für visuelles Feedback)
-    setTimeout(() => {
-        nextQuestion();
-    }, 300);
 }
 
 /**
@@ -418,11 +419,8 @@ function toggleAnswer(answerIndex, inputType) {
                     answerOption.classList.add('wrong-feedback');
                 }
             } else {
-                // Bei normalem Quiz: Blau (selected) mit rotem Hinweis bei falscher Antwort
+                // Bei normalem Quiz: Nur blau markieren, kein Feedback ob richtig/falsch
                 answerOption.classList.add('selected');
-                if (!isCorrect) {
-                    answerOption.classList.add('wrong-feedback');
-                }
             }
         }
     }
