@@ -291,16 +291,5 @@ async function confirmDeleteQuiz(quizId, quizTitle) {
     }
 }
 
-/**
- * HTML-Entities escapen (Schutz vor XSS)
- * @param {string} text - Der zu escapende Text
- * @returns {string} Der escapte Text
- */
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
 // Quizzes beim Laden der Seite anzeigen
 displayQuizzes();

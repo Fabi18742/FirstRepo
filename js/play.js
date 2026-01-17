@@ -23,6 +23,7 @@ const timeRemaining = document.getElementById('timeRemaining');
 let currentQuiz = null;
 let userAnswers = [];
 let score = 0;
+let questionScores = new Map(); // Map: questionIndex -> Punktzahl (0.0 bis 1.0)
 let totalQuestionsAnswered = 0; // Zähler für alle beantworteten Fragen (für Fortschrittsbalken)
 
 // Timer-Variablen
@@ -198,8 +199,12 @@ function gameOver() {
         clearInterval(timerInterval);
     }
     
-    // Score ist die Anzahl der richtig beantworteten Fragen
-    score = answeredCorrectly.size;
+    // Score berechnen: Summe aller Teilpunkte
+    score = 0;
+    for (let i = 0; i < currentQuiz.questions.length; i++) {
+        score += questionScores.get(i) || 0;
+    }
+    score = Math.round(score * 100) / 100;
     
     // Spezielle Game Over Anzeige
     quizGame.style.display = 'none';
@@ -427,6 +432,39 @@ function toggleAnswer(answerIndex, inputType) {
 }
 
 /**
+ * Berechnet die Punktzahl für eine Frage (0.0 bis 1.0)
+ * Bei Multiple-Choice: Jede Antwortmöglichkeit zählt gleich viel
+ */
+function calculateQuestionScore(question, selectedAnswers) {
+    const questionType = question.type || currentQuiz.type;
+    
+    // Bei Multiple-Choice: Teilpunkte basierend auf korrekt behandelten Antworten
+    if (questionType === 'multiple-choice') {
+        const totalAnswers = question.answers.length;
+        let correctlyHandled = 0;
+        
+        // Durch alle Antwortmöglichkeiten iterieren
+        for (let i = 0; i < totalAnswers; i++) {
+            const isCorrectAnswer = question.correctAnswers.includes(i);
+            const wasSelected = selectedAnswers.includes(i);
+            
+            // Korrekt behandelt = (richtige ausgewählt) ODER (falsche nicht ausgewählt)
+            if ((isCorrectAnswer && wasSelected) || (!isCorrectAnswer && !wasSelected)) {
+                correctlyHandled++;
+            }
+        }
+        
+        // Score = (korrekt behandelte Antworten) / (total Antworten)
+        return correctlyHandled / totalAnswers;
+    }
+    
+    // Für True/False und Single-Choice: alles oder nichts
+    const userSorted = [...selectedAnswers].sort((a, b) => a - b);
+    const correctSorted = [...question.correctAnswers].sort((a, b) => a - b);
+    return JSON.stringify(userSorted) === JSON.stringify(correctSorted) ? 1.0 : 0.0;
+}
+
+/**
  * Zur nächsten Frage oder zum Ergebnis
  */
 function nextQuestion() {
@@ -449,8 +487,13 @@ function nextQuestion() {
     const actualQuestionIndex = questionQueue[0];
     const question = currentQuiz.questions[actualQuestionIndex];
     const correctAnswer = question.correctAnswers;
+    const questionType = question.type || currentQuiz.type;
     
-    // Antwort prüfen
+    // Punktzahl berechnen
+    const questionScore = calculateQuestionScore(question, selectedAnswers);
+    questionScores.set(actualQuestionIndex, questionScore);
+    
+    // Antwort prüfen (komplett richtig?)
     const userSorted = [...selectedAnswers].sort((a, b) => a - b);
     const correctSorted = [...correctAnswer].sort((a, b) => a - b);
     const isCorrect = JSON.stringify(userSorted) === JSON.stringify(correctSorted);
@@ -464,18 +507,20 @@ function nextQuestion() {
     }
     
     if (isCorrect) {
-        // Richtige Antwort
+        // Komplett richtig
         answeredCorrectly.add(actualQuestionIndex);
-        questionQueue.shift(); // Frage aus der Queue entfernen
+        questionQueue.shift();
         
-        // Bei Zeit-Challenge: Zeit-Bonus geben
         if (timeChallengeMode) {
             addTimeBonus();
         }
     } else {
-        // Falsche Antwort
-        // Visuelles Feedback bei Multiple Choice
-        if (currentQuiz.type === 'multiple-choice') {
+        // Nicht komplett richtig - aber vielleicht Teilpunkte
+        if (questionScore > 0) {
+            answeredCorrectly.add(actualQuestionIndex);
+        }
+        
+        if (questionType === 'multiple-choice') {
             showWrongAnswerFeedback();
         }
         
@@ -522,8 +567,12 @@ function showResult() {
         clearInterval(timerInterval);
     }
     
-    // Score ist die Anzahl der richtig beantworteten Fragen
-    score = answeredCorrectly.size;
+    // Score berechnen: Summe aller Teilpunkte
+    score = 0;
+    for (let i = 0; i < currentQuiz.questions.length; i++) {
+        score += questionScores.get(i) || 0;
+    }
+    score = Math.round(score * 100) / 100;
     
     // Prozentsatz berechnen
     const percentage = Math.round((score / currentQuiz.questions.length) * 100);
@@ -561,17 +610,31 @@ function generateQuestionsReview() {
     reviewList.innerHTML = '';
     
     currentQuiz.questions.forEach((question, index) => {
-        const isCorrect = answeredCorrectly.has(index);
+        const questionScore = questionScores.get(index) || 0;
+        const isFullyCorrect = questionScore === 1.0;
+        const hasPartialPoints = questionScore > 0 && questionScore < 1.0;
         const userAnswerIndices = userAnswers[index] || [];
         const questionType = question.type || currentQuiz.type;
         
         // Container für Frage
         const questionItem = document.createElement('div');
-        questionItem.className = `review-item ${isCorrect ? 'correct' : 'incorrect'}`;
+        questionItem.className = `review-item ${isFullyCorrect ? 'correct' : (hasPartialPoints ? 'partial' : 'incorrect')}`;
         
-        // Status-Icon
-        const statusIcon = isCorrect ? '✓' : '✗';
-        const statusClass = isCorrect ? 'status-correct' : 'status-incorrect';
+        // Status-Icon und Punktzahl
+        let statusIcon, statusClass, scoreText;
+        if (isFullyCorrect) {
+            statusIcon = '✓';
+            statusClass = 'status-correct';
+            scoreText = '1/1';
+        } else if (hasPartialPoints) {
+            statusIcon = '½';
+            statusClass = 'status-partial';
+            scoreText = `${Math.round(questionScore * 100) / 100}/1`;
+        } else {
+            statusIcon = '✗';
+            statusClass = 'status-incorrect';
+            scoreText = '0/1';
+        }
         
         // Fragentext (max. 100 Zeichen, dann mit ... abkürzen)
         const questionText = question.text;
@@ -582,7 +645,10 @@ function generateQuestionsReview() {
         questionItem.innerHTML = `
             <div class="review-header">
                 <span class="review-number">Frage ${index + 1}</span>
-                <span class="review-status ${statusClass}">${statusIcon}</span>
+                <div class="review-score-container">
+                    <span class="review-score">${scoreText}</span>
+                    <span class="review-status ${statusClass}">${statusIcon}</span>
+                </div>
             </div>
             <div class="review-question ${isLongQuestion ? 'expandable collapsed' : ''}" data-full-text="${escapeHtml(questionText)}">
                 <div class="question-text-short">${escapeHtml(displayText)}</div>
@@ -702,6 +768,7 @@ function toggleQuestion(button) {
 function restartQuiz() {
     userAnswers = [];
     score = 0;
+    questionScores.clear();
     totalQuestionsAnswered = 0;
     
     // Fragen-Queue zurücksetzen

@@ -199,6 +199,7 @@ Dieses Projekt demonstriert:
 - Sort funktion von quiz
 - Unterschiedliche fragen types in einem quiz
 
++ Wenn man multiple choice bearbeitet wird es als single choice angezeigt
 
 ## 👨‍💻 Entwicklung
 

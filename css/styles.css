@@ -1365,6 +1365,10 @@ main {
     border-left-color: var(--success);
 }
 
+.review-item.partial {
+    border-left-color: #FFA500;
+}
+
 .review-item.incorrect {
     border-left-color: var(--danger);
 }
@@ -1389,6 +1393,21 @@ main {
     letter-spacing: 0.5px;
 }
 
+.review-score-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.review-score {
+    font-weight: 600;
+    color: var(--text-dark);
+    font-size: 14px;
+    background: rgba(0, 0, 0, 0.05);
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
 .review-status {
     font-size: 20px;
     font-weight: bold;
@@ -1402,6 +1421,11 @@ main {
 
 .status-correct {
     background: var(--success);
+    color: white;
+}
+
+.status-partial {
+    background: #FFA500;
     color: white;
 }
 
